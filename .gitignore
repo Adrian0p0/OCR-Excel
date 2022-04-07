@@ -2,3 +2,7 @@
 *.pdf
 *.png
 *.xlsx
+*.spec
+/dist
+/build
+/__pycache__

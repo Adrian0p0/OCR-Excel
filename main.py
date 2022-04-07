@@ -48,8 +48,14 @@ def image_section(folder,section):
 	res = cv2.matchTemplate(img_gray, template, cv2.TM_CCOEFF_NORMED)
 	_, _, _, maxLoc=cv2.minMaxLoc(res)
 
-	cv2.rectangle(img_rgb, maxLoc, (maxLoc[0]+h, maxLoc[1]+w), (0, 255, 255), 2)
-	crop_img = img_rgb[maxLoc[1]:maxLoc[1]+w, maxLoc[0]:maxLoc[0]+h, :] 
+	#cv2.rectangle(img_rgb, maxLoc, (maxLoc[0]+h, maxLoc[1]+w), (0, 255, 255), 2)
+
+	if section == 'product':
+		offset = int(w/2)-10
+	else:
+		offset = 0
+
+	crop_img = img_rgb[maxLoc[1]+offset:maxLoc[1]+w, maxLoc[0]:maxLoc[0]+h, :] 
 
 	cv2.imwrite(f'tmp/res_{section}.png', crop_img)
 
@@ -76,17 +82,17 @@ def extract_data(section):
 		product = product[len(product)-1]
 
 		patern1 = re.search(r"(\w{2,}\s?.*?)\s(?:\w{2})\s(\d{1,}.\d{2})", product, re.DOTALL )
-		patern2 = re.search(r"(\w{2,}\s?.*?)\s{1,}(?:\w{2})\s{1,}(\d{1,}.\d{2})", data.replace("\n", " "), re.DOTALL )
+		patern2 = re.search(r"(\w{2,}\s?[A-z0-9\-\_]*?)\s{1,}(?:\w{2})\s{1,}(\d{1,}.\d{2})", data.replace("\n", " "), re.DOTALL )
 
 		if patern1:
+			print("Tipar 1")
 			vals[3] = patern1.group(1).strip()
 			vals[4] = patern1.group(2).strip()
 
 		elif patern2:
+			print("Tipar 2")
 			vals[3] = patern2.group(1).strip()
-			vals[4] = patern2.group(2).strip()
-			
-		
+			vals[4] = patern2.group(2).strip()		
 
 def identify_template():
 	global vals
@@ -111,18 +117,19 @@ def main():
 	if not os.path.exists('avize.xlsx'):
 		excell_check()
 
-	file_path = filedialog.askopenfilename()
-	extract_img_pdf(file_path)
-	furnizor = identify_template()
-	print(furnizor)
+	file_path = filedialog.askopenfilename(initialdir = "/", title = "Select file", filetypes = (("PDF","*.pdf"),("All files","*.*")))
+	print(file_path)
+	if file_path:
+		extract_img_pdf(file_path)
+		furnizor = identify_template()
 
-	if not furnizor == 'ERROR':
-		image_section(furnizor,'nr_data')
-		image_section(furnizor,'product')
-	
-		excell_write(vals)
+		if not furnizor == 'ERROR':
+			image_section(furnizor,'nr_data')
+			image_section(furnizor,'product')
+		
+			excell_write(vals)
 
-	print(vals)
+		print(vals)
 
 if  __name__ == '__main__':
 	main()
