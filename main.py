@@ -10,16 +10,26 @@ from openpyxl import Workbook
 vals = [None] * 5
 
 def extract_img_pdf(file):
+	global vals
 	pdf_file = fitz.open(file)
 	for page_index in range(len(pdf_file)):
 		page = pdf_file[page_index]
 		for image_index, img in enumerate(page.get_images(), start=1):
+			vals = [None] * 5
 			xref = img[0]
 			base_image = pdf_file.extract_image(xref)
 			image_bytes = base_image["image"]
 			image_ext = base_image["ext"]
 			image = Image.open(io.BytesIO(image_bytes))
 			image.save(open(f"tmp/res_img.png", "wb"))
+
+			furnizor = identify_template()
+
+			if not furnizor == 'ERROR':
+				image_section(furnizor,'nr_data')
+				image_section(furnizor,'product')
+				print(vals)
+				excell_write(vals)
 
 def excell_check():
 	book = Workbook()
@@ -85,12 +95,10 @@ def extract_data(section):
 		patern2 = re.search(r"(\w{2,}\s?[A-z0-9\-\_]*?)\s{1,}(?:\w{2})\s{1,}(\d{1,}.\d{2})", data.replace("\n", " "), re.DOTALL )
 
 		if patern1:
-			print("Tipar 1")
 			vals[3] = patern1.group(1).strip()
 			vals[4] = patern1.group(2).strip()
 
 		elif patern2:
-			print("Tipar 2")
 			vals[3] = patern2.group(1).strip()
 			vals[4] = patern2.group(2).strip()		
 
@@ -111,25 +119,32 @@ def identify_template():
 	else:
 		return 'ERROR'
 
+def notificare(message):
+	print(message)
+	input("Press Enter to continue...")
+
 def main():
+	error = False
+
 	root = tk.Tk()
 	root.withdraw()
 	if not os.path.exists('avize.xlsx'):
 		excell_check()
 
-	file_path = filedialog.askopenfilename(initialdir = "/", title = "Select file", filetypes = (("PDF","*.pdf"),("All files","*.*")))
-	print(file_path)
-	if file_path:
-		extract_img_pdf(file_path)
-		furnizor = identify_template()
+	try:
+		test = openpyxl.load_workbook('avize.xlsx')
+	except:
+		error = True
+	
+	if not error:
+		file_path = filedialog.askopenfilename(initialdir = "./", title = "Select file", filetypes = (("PDF","*.pdf"),("All files","*.*")))
+		if file_path:
+			extract_img_pdf(file_path)
 
-		if not furnizor == 'ERROR':
-			image_section(furnizor,'nr_data')
-			image_section(furnizor,'product')
+			notificare("Extragerea datelor finalizata")
+	else:
+		notificare("Inchideti fisierul excel aviz.xlsx!")
 		
-			excell_write(vals)
-
-		print(vals)
 
 if  __name__ == '__main__':
 	main()
